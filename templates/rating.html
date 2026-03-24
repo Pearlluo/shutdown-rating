@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shutdown Rating</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="page">
+        <div class="topbar">
+            <div class="logo">MARLU GROUP</div>
+            <div class="title">Enter Employee Ratings</div>
+        </div>
+
+        <div class="section-title">Select Job</div>
+
+        <form method="POST" action="/submit" id="ratingForm">
+            <div class="filters filters-two">
+                <div class="field">
+                    <label>Select Job</label>
+                    <select name="job" id="jobSelect">
+                        <option value="">Select job</option>
+                        {% for c in contracts %}
+                        <option value="{{ c }}">{{ c }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>Supervisor Name</label>
+                    <input
+                        type="text"
+                        name="supervisor"
+                        id="supervisorInput"
+                        list="supervisorList"
+                        placeholder="Type supervisor name"
+                        autocomplete="off"
+                    >
+                    <datalist id="supervisorList"></datalist>
+                </div>
+            </div>
+
+            <div class="rating-note">
+                Rating 1-5:
+                <span>1=Excellent</span>
+                <span>2=Exceeds expectation</span>
+                <span>3=Meets expectation</span>
+                <span>4=Often does not meet expectation</span>
+                <span>5=Poor</span>
+            </div>
+
+            <div class="personnel-title">Personnel</div>
+
+            <div class="table-wrap">
+                <table id="workerTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Comments</th>
+                            <th>Safety</th>
+                            <th>Punctuality</th>
+                            <th>Comms</th>
+                            <th>Conduct</th>
+                            <th>Teamwork</th>
+                            <th>Skills</th>
+                            <th>Drive</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workerBody"></tbody>
+                </table>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="save-btn">Save Ratings</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const jobSelect = document.getElementById("jobSelect");
+        const workerBody = document.getElementById("workerBody");
+        const supervisorList = document.getElementById("supervisorList");
+        const supervisorInput = document.getElementById("supervisorInput");
+
+        function ratingOptions(name) {
+            return `
+                <select name="${name}">
+                    <option value=""></option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+            `;
+        }
+
+        function uniquePeopleByName(people) {
+            const seen = new Set();
+            const result = [];
+
+            (people || []).forEach(person => {
+                const name = (person.Name || "").trim();
+                if (!name) return;
+
+                const key = name.toUpperCase();
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    result.push(person);
+                }
+            });
+
+            return result;
+        }
+
+        function fillSupervisorOptions(leaders, workers) {
+            supervisorList.innerHTML = "";
+
+            const combined = uniquePeopleByName([...(leaders || []), ...(workers || [])]);
+
+            combined.forEach(person => {
+                const option = document.createElement("option");
+                option.value = person.Name;
+                supervisorList.appendChild(option);
+            });
+        }
+
+        function renderWorkers(workers) {
+            workerBody.innerHTML = "";
+
+            if (!workers || workers.length === 0) {
+                workerBody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="empty-note">No workers found for this project</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            workers.forEach(w => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>
+                        ${w.Name}
+                        <input type="hidden" name="name" value="${w.Name}">
+                    </td>
+                    <td>
+                        ${w.Position}
+                        <input type="hidden" name="position" value="${w.Position}">
+                    </td>
+                    <td><input type="text" name="comments"></td>
+                    <td>${ratingOptions("safety")}</td>
+                    <td>${ratingOptions("punctuality")}</td>
+                    <td>${ratingOptions("comms")}</td>
+                    <td>${ratingOptions("conduct")}</td>
+                    <td>${ratingOptions("teamwork")}</td>
+                    <td>${ratingOptions("skills")}</td>
+                    <td>${ratingOptions("drive")}</td>
+                `;
+                workerBody.appendChild(row);
+            });
+        }
+
+        jobSelect.addEventListener("change", async function () {
+            const job = this.value;
+
+            if (!job) {
+                workerBody.innerHTML = "";
+                supervisorList.innerHTML = "";
+                supervisorInput.value = "";
+                return;
+            }
+
+            try {
+                const res = await fetch(`/get_project_data?project=${encodeURIComponent(job)}`);
+                const data = await res.json();
+
+                renderWorkers(data.workers);
+                fillSupervisorOptions(data.leaders, data.workers);
+            } catch (error) {
+                console.error("Failed to load project data:", error);
+                workerBody.innerHTML = `
+                    <tr>
+                        <td colspan="10" class="empty-note">Failed to load project data</td>
+                    </tr>
+                `;
+                supervisorList.innerHTML = "";
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+flask
+pandas
+openpyxl
+requests
+gunicorn
+pandas
+dotenv
+os
+datetime
+python-dotenv
