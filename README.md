@@ -33,9 +33,6 @@ The application is hosted on Azure App Service and deployed automatically using 
 - static/ (CSS and assets)
 - requirements.txt (dependencies)
 
-## Live Application
-https://shutdown-rating-marlugroup-f9hvameveshmcqge.australiaeast-01.azurewebsites.net/
-
 ## Data Flow
 1. User submits data through the web form
 2. The backend processes the data
