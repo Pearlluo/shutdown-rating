@@ -16,11 +16,11 @@
 
     <div class="section-title">Shutdown</div>
 
-    <form method="POST" action="/submit">
+    <form method="POST" action="/submit" id="ratingForm">
 
         <div class="filters filters-two">
             <div class="field">
-                <label>Select Shutdown</label>
+                <label for="jobSelect">Select Shutdown</label>
                 <select name="job" id="jobSelect" required>
                     <option value="">Select shutdown</option>
                     {% for c in contracts %}
@@ -30,13 +30,14 @@
             </div>
 
             <div class="field">
-                <label>Supervisor Name</label>
+                <label for="supervisorInput">Supervisor Name</label>
                 <input
                     type="text"
                     name="supervisor"
                     id="supervisorInput"
                     list="supervisorList"
                     placeholder="Type supervisor name"
+                    autocomplete="off"
                     required
                 >
                 <datalist id="supervisorList"></datalist>
@@ -44,29 +45,35 @@
         </div>
 
         <div class="rating-note">
-            Rating 1-5:
-            <span>1=Excellent</span>
-            <span>2=Exceeds expectation</span>
-            <span>3=Meets expectation</span>
-            <span>4=Often does not meet expectation</span>
-            <span>5=Poor</span>
+            <strong>Rating 1-5:</strong>
+            <span>1 = Excellent</span>
+            <span>2 = Exceeds expectation</span>
+            <span>3 = Meets expectation</span>
+            <span>4 = Often does not meet expectation</span>
+            <span>5 = Poor</span>
         </div>
 
         <div class="personnel-title">Personnel</div>
 
-        <div class="table-wrap">
-            <table id="workerTable">
-                <thead>
-                    <tr>
-                        <th class="col-name">Name</th>
-                        <th class="col-position">Position</th>
-                        <th class="col-rating">Overall Rating</th>
-                        <th class="col-comments">Comments</th>
-                    </tr>
-                </thead>
-                <tbody id="workerBody"></tbody>
-            </table>
+        <!-- Desktop table -->
+        <div class="desktop-view">
+            <div class="table-wrap">
+                <table id="workerTable">
+                    <thead>
+                        <tr>
+                            <th class="col-name">Name</th>
+                            <th class="col-position">Position</th>
+                            <th class="col-rating">Overall Rating</th>
+                            <th class="col-comments">Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workerBodyDesktop"></tbody>
+                </table>
+            </div>
         </div>
+
+        <!-- Mobile cards -->
+        <div class="mobile-view" id="workerBodyMobile"></div>
 
         <div class="actions">
             <button type="submit" class="save-btn">Save Ratings</button>
@@ -77,8 +84,33 @@
 
 <script>
 const jobSelect = document.getElementById("jobSelect");
-const workerBody = document.getElementById("workerBody");
+const workerBodyDesktop = document.getElementById("workerBodyDesktop");
+const workerBodyMobile = document.getElementById("workerBodyMobile");
 const supervisorList = document.getElementById("supervisorList");
+
+function escapeHtml(value) {
+    if (value === null || value === undefined) return "";
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function renderDesktopEmpty(message) {
+    workerBodyDesktop.innerHTML = `
+        <tr>
+            <td colspan="4" class="empty-note">${escapeHtml(message)}</td>
+        </tr>
+    `;
+}
+
+function renderMobileEmpty(message) {
+    workerBodyMobile.innerHTML = `
+        <div class="empty-note mobile-empty">${escapeHtml(message)}</div>
+    `;
+}
 
 function ratingOptions(name) {
     return `
@@ -94,54 +126,71 @@ function ratingOptions(name) {
 }
 
 function renderWorkers(workers) {
-    workerBody.innerHTML = "";
+    workerBodyDesktop.innerHTML = "";
+    workerBodyMobile.innerHTML = "";
 
     if (!workers || workers.length === 0) {
-        workerBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="empty-note">No workers found for this shutdown</td>
-            </tr>
-        `;
+        renderDesktopEmpty("No workers found for this shutdown");
+        renderMobileEmpty("No workers found for this shutdown");
         return;
     }
 
-    workers.forEach(w => {
-        const row = document.createElement("tr");
+    workers.forEach((w, index) => {
+        const safeName = escapeHtml(w.Name || "");
+        const safePosition = escapeHtml(w.Position || "");
 
-        row.innerHTML = `
-            <td class="cell-name">
-                <div class="cell-text-left">
-                    ${w.Name || ""}
-                    <input type="hidden" name="name" value="${w.Name || ""}">
-                </div>
+        // Desktop row
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+            <td>
+                ${safeName}
+                <input type="hidden" name="name" value="${safeName}">
             </td>
-
-            <td class="cell-position">
-                <div class="cell-text-left">
-                    ${w.Position || ""}
-                    <input type="hidden" name="position" value="${w.Position || ""}">
-                </div>
+            <td>
+                ${safePosition}
+                <input type="hidden" name="position" value="${safePosition}">
             </td>
-
-            <td class="cell-rating">
-                <div class="rating-wrap">
-                    ${ratingOptions("overall_rating")}
-                </div>
+            <td>
+                ${ratingOptions("overall_rating")}
             </td>
-
-            <td class="cell-comments">
-                <div class="comments-wrap">
-                    <input
-                        type="text"
-                        name="comments"
-                        class="comments-input"
-                        placeholder="Optional comments"
-                    >
-                </div>
+            <td>
+                <input
+                    type="text"
+                    name="comments"
+                    class="comments-input"
+                    placeholder="Optional comments"
+                >
             </td>
         `;
+        workerBodyDesktop.appendChild(tr);
 
-        workerBody.appendChild(row);
+        // Mobile card
+        const card = document.createElement("div");
+        card.className = "worker-card";
+        card.innerHTML = `
+            <div class="worker-card-head">
+                <div class="worker-name">${safeName}</div>
+                <div class="worker-position">${safePosition}</div>
+                <input type="hidden" name="name" value="${safeName}">
+                <input type="hidden" name="position" value="${safePosition}">
+            </div>
+
+            <div class="worker-field">
+                <label>Overall Rating</label>
+                ${ratingOptions("overall_rating")}
+            </div>
+
+            <div class="worker-field">
+                <label>Comments</label>
+                <input
+                    type="text"
+                    name="comments"
+                    class="comments-input"
+                    placeholder="Optional comments"
+                >
+            </div>
+        `;
+        workerBodyMobile.appendChild(card);
     });
 }
 
@@ -149,30 +198,45 @@ jobSelect.addEventListener("change", async function () {
     const job = this.value;
 
     if (!job) {
-        workerBody.innerHTML = "";
+        workerBodyDesktop.innerHTML = "";
+        workerBodyMobile.innerHTML = "";
         supervisorList.innerHTML = "";
         return;
     }
 
+    renderDesktopEmpty("Loading workers...");
+    renderMobileEmpty("Loading workers...");
+
     try {
         const res = await fetch(`/get_project_data?project=${encodeURIComponent(job)}`);
-        const data = await res.json();
 
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
         renderWorkers(data.workers || []);
 
         supervisorList.innerHTML = "";
-        [...(data.leaders || []), ...(data.workers || [])].forEach(p => {
-            const o = document.createElement("option");
-            o.value = p.Name;
-            supervisorList.appendChild(o);
+
+        const allPeople = [...(data.leaders || []), ...(data.workers || [])];
+        const seen = new Set();
+
+        allPeople.forEach(p => {
+            const name = p && p.Name ? String(p.Name).trim() : "";
+            if (!name || seen.has(name)) return;
+            seen.add(name);
+
+            const option = document.createElement("option");
+            option.value = name;
+            supervisorList.appendChild(option);
         });
+
     } catch (err) {
         console.error("Failed to load project data:", err);
-        workerBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="empty-note">Failed to load workers</td>
-            </tr>
-        `;
+        renderDesktopEmpty("Failed to load workers");
+        renderMobileEmpty("Failed to load workers");
+        supervisorList.innerHTML = "";
     }
 });
 </script>
