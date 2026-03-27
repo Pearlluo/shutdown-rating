@@ -226,7 +226,7 @@ def refresh_cache():
 
 # ==============================
 # 提交评分
-# 只提交有评分的数据行
+# 只提交有 overall_rating 的数据行
 # ==============================
 @app.route("/submit", methods=["POST"])
 def submit():
@@ -238,13 +238,7 @@ def submit():
         names = request.form.getlist("name")
         positions = request.form.getlist("position")
         comments = request.form.getlist("comments")
-        safety = request.form.getlist("safety")
-        punctuality = request.form.getlist("punctuality")
-        comms = request.form.getlist("comms")
-        conduct = request.form.getlist("conduct")
-        teamwork = request.form.getlist("teamwork")
-        skills = request.form.getlist("skills")
-        drive = request.form.getlist("drive")
+        overall_ratings = request.form.getlist("overall_rating")
 
         submitted_at = datetime.now().strftime("%Y/%m/%d %H:%M:%S")
         rows = []
@@ -253,15 +247,14 @@ def submit():
             len(names),
             len(positions),
             len(comments),
-            len(safety),
-            len(punctuality),
-            len(comms),
-            len(conduct),
-            len(teamwork),
-            len(skills),
-            len(drive),
+            len(overall_ratings),
             1
         )
+
+        selected_job = job if job else contract
+        if not selected_job:
+            print("⚠ 没有 job / contract，未提交")
+            return redirect(url_for("home"))
 
         seen_keys = set()
 
@@ -269,30 +262,23 @@ def submit():
             person = get_value(names, i)
             position = get_value(positions, i)
             comment = get_value(comments, i)
+            overall_rating = get_value(overall_ratings, i)
 
-            s1 = get_value(safety, i)
-            s2 = get_value(punctuality, i)
-            s3 = get_value(comms, i)
-            s4 = get_value(conduct, i)
-            s5 = get_value(teamwork, i)
-            s6 = get_value(skills, i)
-            s7 = get_value(drive, i)
-
-            has_rating_data = any([s1, s2, s3, s4, s5, s6, s7])
-
-            if not has_rating_data:
+            # 没有人名不提交
+            if not person:
                 continue
 
-            if not person:
+            # 没有评分不提交
+            if not overall_rating:
                 continue
 
             # 本次提交内去重，避免重复写入同一行
             dedupe_key = (
                 person.upper(),
-                (job if job else contract).upper(),
+                selected_job.upper(),
                 supervisor.upper(),
-                s1, s2, s3, s4, s5, s6, s7,
-                comment.strip()
+                overall_rating,
+                comment.upper()
             )
 
             if dedupe_key in seen_keys:
@@ -302,18 +288,12 @@ def submit():
 
             rows.append({
                 "Person": person,
-                "Job": job if job else contract,
+                "Job": selected_job,
                 "Supervisor": supervisor,
                 "Comments": comment,
-                "Safety": s1,
-                "Punctuality": s2,
-                "Comms": s3,
-                "Conduct": s4,
-                "Teamwork": s5,
-                "Skills": s6,
-                "Drive": s7,
+                "OverallRating": overall_rating,
 
-                # 这些字段不会存本地 Excel，只保留给调试/追踪
+                # 保留调试 / 追踪字段
                 "Contract": contract,
                 "Position": position,
                 "SubmittedAt": submitted_at

@@ -1,3 +1,4 @@
+/* ===== 基础 ===== */
 body {
     margin: 0;
     font-family: "Segoe UI", Arial, sans-serif;
@@ -5,7 +6,8 @@ body {
 }
 
 .page {
-    width: 1200px;
+    width: 1350px;
+    max-width: calc(100% - 24px);
     margin: 20px auto;
     background: #f4f4f4;
     border-radius: 8px;
@@ -20,12 +22,13 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 18px 24px;
+    gap: 16px;
+    flex-wrap: wrap;
 }
 
 .logo {
     font-size: 26px;
     font-weight: bold;
-    letter-spacing: 1px;
 }
 
 .title {
@@ -42,6 +45,7 @@ body {
     padding: 10px 16px;
 }
 
+/* ===== Filters ===== */
 .filters {
     background: #000;
     color: #fff;
@@ -49,6 +53,10 @@ body {
     grid-template-columns: 1fr 1fr 1fr;
     gap: 20px;
     padding: 18px 16px 24px;
+}
+
+.filters-two {
+    grid-template-columns: 1fr 1fr;
 }
 
 .field label {
@@ -67,8 +75,10 @@ body {
     font-size: 14px;
     background: #fff;
     box-sizing: border-box;
+    min-height: 42px;
 }
 
+/* ===== Rating note ===== */
 .rating-note {
     background: #7a878d;
     color: #fff;
@@ -79,64 +89,98 @@ body {
     gap: 16px;
 }
 
-.leader-box {
-    background: #fff;
-    padding: 12px 16px;
-    border-bottom: 1px solid #ddd;
-}
-
-.leader-item {
-    padding: 6px 0;
-    border-bottom: 1px solid #eee;
-    font-size: 14px;
-}
-
-.leader-item:last-child {
-    border-bottom: none;
-}
-
+/* ===== Table ===== */
 .table-wrap {
     padding: 0 16px 20px;
-    overflow-x: auto;
 }
 
-table {
+#workerTable {
     width: 100%;
     border-collapse: collapse;
-    background: #fff;
+    table-layout: fixed;
 }
 
-th {
+#workerTable th {
     background: #eaeaea;
     font-weight: 600;
     font-size: 13px;
-}
-
-th, td {
-    border: 1px solid #d6d6d6;
-    padding: 8px;
     text-align: center;
 }
 
-td:first-child,
-td:nth-child(2),
-td:nth-child(3) {
+#workerTable th,
+#workerTable td {
+    border: 1px solid #d6d6d6;
+    padding: 10px;
+}
+
+/* ===== 列布局 ===== */
+
+/* Name */
+#workerTable th.col-name,
+#workerTable td.cell-name {
+    width: 18%;
+}
+
+#workerTable td.cell-name {
+    text-align: left;
+    padding-left: 6px;
+}
+
+/* Position */
+#workerTable th.col-position,
+#workerTable td.cell-position {
+    width: 18%;
+}
+
+#workerTable td.cell-position {
+    text-align: left;
+    padding-left: 6px;
+}
+
+/* ⭐ Overall Rating（关键：放宽列） */
+#workerTable th.col-rating,
+#workerTable td.cell-rating {
+    width: 28%;
+    text-align: center;
+}
+
+/* Comments */
+#workerTable th.col-comments,
+#workerTable td.cell-comments {
+    width: 26%;
+}
+
+#workerTable td.cell-comments {
     text-align: left;
 }
 
-td input[type="text"] {
-    width: 100%;
-    padding: 6px;
+/* ===== 控件 ===== */
+
+.rating-wrap {
+    display: flex;
+    justify-content: center;
+}
+
+/* ⭐ 下拉框变宽（重点） */
+.rating-select {
+    width: 260px;
+    height: 58px;
+    padding: 8px 12px;
+    font-size: 15px;
+    border: 1px solid #bdbdbd;
+    border-radius: 4px;
+}
+
+/* Comments */
+.comments-input {
+    width: 80%;
+    height: 42px;
+    padding: 8px 12px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    box-sizing: border-box;
 }
 
-td select {
-    width: 60px;
-    padding: 4px;
-}
-
+/* ===== UI ===== */
 tr:hover {
     background: #f9f9f9;
 }
@@ -151,10 +195,8 @@ tr:hover {
     color: #fff;
     border: none;
     padding: 12px 22px;
-    font-size: 14px;
     border-radius: 4px;
     cursor: pointer;
-    transition: 0.2s;
 }
 
 .save-btn:hover {
@@ -162,7 +204,13 @@ tr:hover {
 }
 
 .empty-note {
+    text-align: center;
     color: #777;
-    font-style: italic;
-    padding: 10px 0;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 900px) {
+    #workerTable {
+        min-width: 1000px;
+    }
 }

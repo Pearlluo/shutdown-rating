@@ -128,49 +128,21 @@ def get_roster_dataframe():
 
 # ==============================
 # 7. 判断是否有评分
+# 现在只看 OverallRating（Python 中间字段）
 # ==============================
 def has_ranking_data(row):
-    fields = [
-        "Safety",
-        "Punctuality",
-        "Comms",
-        "Conduct",
-        "Teamwork",
-        "Skills",
-        "Drive"
-    ]
-
-    for field in fields:
-        value = row.get(field, "")
-        if value is not None and str(value).strip() != "":
-            return True
-
-    return False
+    value = row.get("OverallRating", "")
+    return value is not None and str(value).strip() != ""
 
 
 # ==============================
 # 8. 拼接 RankingData
-# 保留空位，确保顺序固定
+# 现在只保留一个总评分
+# 最终写进 SharePoint 的字段是 RankingData
 # ==============================
 def build_ranking_data(row):
-    fields = [
-        "Safety",
-        "Punctuality",
-        "Comms",
-        "Conduct",
-        "Teamwork",
-        "Skills",
-        "Drive"
-    ]
-
-    values = []
-
-    for field in fields:
-        value = row.get(field, "")
-        value_str = str(value).strip() if value is not None else ""
-        values.append(value_str)
-
-    return ",".join(values)
+    value = row.get("OverallRating", "")
+    return str(value).strip() if value is not None else ""
 
 
 # ==============================
@@ -278,6 +250,7 @@ def add_ranking_item(row, token, site_id, list_id, person_map, supervisor_map, j
     supervisor_name = str(row.get("Supervisor", "")).strip()
     job_name = str(row.get("Job", "")).strip()
     comments = str(row.get("Comments", "")).strip()
+    overall_rating = str(row.get("OverallRating", "")).strip()
 
     ranking_data = build_ranking_data(row)
 
@@ -328,7 +301,7 @@ def add_ranking_item(row, token, site_id, list_id, person_map, supervisor_map, j
     if res.status_code not in [200, 201]:
         raise Exception(f"Write failed: {res.text}")
 
-    print(f"✅ 写入成功: {person_name} -> {ranking_data}")
+    print(f"✅ 写入成功: {person_name} -> RankingData={ranking_data}")
     return res.json()
 
 
@@ -391,4 +364,3 @@ if __name__ == "__main__":
         print(k, "->", v)
         if i >= 9:
             break
-

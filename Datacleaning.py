@@ -34,16 +34,21 @@ def get_cleaned_roster_dataframe() -> pd.DataFrame:
     # 去掉列名前后空格
     df.columns = df.columns.str.strip()
 
+    # 确保关键列存在
+    required_cols = ["Title", "Position", "WorkType", "Project"]
+    for col in required_cols:
+        if col not in df.columns:
+            df[col] = ""
+
     # 只保留需要的列
     keep_cols = ["Title", "Position", "WorkType", "Project"]
-    existing_cols = [c for c in keep_cols if c in df.columns]
-    df = df[existing_cols].copy()
+    df = df[keep_cols].copy()
 
     # 所有保留列先转字符串并去空格
-    for col in existing_cols:
+    for col in keep_cols:
         df[col] = df[col].fillna("").astype(str).str.strip()
 
-    # 只保留 SH-数字开头的项目
+    # 只保留 SH- 开头的项目
     if "Project" in df.columns:
         df = df[df["Project"].str.upper().str.match(r"^SH-\d+")].copy()
 
