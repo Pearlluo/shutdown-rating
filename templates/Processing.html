@@ -1,10 +1,166 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>$Title$</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submission Processing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .processing-card {
+            background: #fff;
+            width: 90%;
+            max-width: 520px;
+            border-radius: 16px;
+            padding: 36px 28px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        .spinner {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 20px;
+            border: 5px solid #ddd;
+            border-top: 5px solid #b59b00;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .done-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .status-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        .status-text {
+            font-size: 15px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .success {
+            color: #1f7a1f;
+        }
+
+        .error {
+            color: #c62828;
+        }
+
+        .back-link {
+            margin-top: 24px;
+            display: none;
+        }
+
+        .back-link a {
+            color: #111;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-$END$
+    <div class="processing-card">
+        <div class="spinner" id="spinner"></div>
+        <div class="done-icon" id="doneIcon">✓</div>
+
+        <div class="status-title" id="statusTitle">Submission in processing</div>
+        <div class="status-text" id="statusText">
+            Please wait while your ratings are being submitted.
+        </div>
+
+        <div class="back-link" id="backLink">
+            <a href="/">Return to home</a>
+        </div>
+    </div>
+
+    <script>
+        async function processSubmission() {
+            const statusTitle = document.getElementById("statusTitle");
+            const statusText = document.getElementById("statusText");
+            const spinner = document.getElementById("spinner");
+            const doneIcon = document.getElementById("doneIcon");
+            const backLink = document.getElementById("backLink");
+
+            const raw = sessionStorage.getItem("pendingSubmission");
+
+            if (!raw) {
+                spinner.style.display = "none";
+                statusTitle.textContent = "No submission found";
+                statusTitle.classList.add("error");
+                statusText.textContent = "No pending submission data was found.";
+                backLink.style.display = "block";
+                return;
+            }
+
+            try {
+                const entries = JSON.parse(raw);
+                const formData = new FormData();
+
+                entries.forEach(([key, value]) => {
+                    formData.append(key, value);
+                });
+
+                const response = await fetch("/submit", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok && (result.status === "success" || result.status === "duplicate")) {
+                    sessionStorage.removeItem("pendingSubmission");
+
+                    spinner.style.display = "none";
+                    doneIcon.style.display = "block";
+                    statusTitle.textContent = "Successfully submitted";
+                    statusTitle.classList.add("success");
+                    statusText.textContent = result.message || "Your ratings have been submitted successfully.";
+                    backLink.style.display = "block";
+
+                    setTimeout(() => {
+                        window.location.href = "/";
+                    }, 1500);
+                } else {
+                    spinner.style.display = "none";
+                    statusTitle.textContent = "Submission failed";
+                    statusTitle.classList.add("error");
+                    statusText.textContent = result.message || "An error occurred while submitting.";
+                    backLink.style.display = "block";
+                }
+
+            } catch (err) {
+                console.error("Processing submission failed:", err);
+                spinner.style.display = "none";
+                statusTitle.textContent = "Submission failed";
+                statusTitle.classList.add("error");
+                statusText.textContent = "A network or server error occurred.";
+                backLink.style.display = "block";
+            }
+        }
+
+        processSubmission();
+    </script>
 </body>
 </html>

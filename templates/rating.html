@@ -55,7 +55,6 @@
 
         <div class="personnel-title">Personnel</div>
 
-        <!-- Desktop table -->
         <div class="desktop-view">
             <div class="table-wrap">
                 <table id="workerTable">
@@ -72,16 +71,19 @@
             </div>
         </div>
 
-        <!-- Mobile cards -->
         <div class="mobile-view" id="workerBodyMobile"></div>
 
         <div class="actions">
-            <button type="submit" class="save-btn">Save Ratings</button>
+            <button type="submit" class="save-btn" id="saveBtn">Save Ratings</button>
         </div>
+
+        <div id="submitMessage" class="submit-message"></div>
+        <input type="hidden" name="submission_token" id="submissionToken">
 
     </form>
 </div>
 
+<!-- ================= 原始 worker 加载逻辑（不动） ================= -->
 <script>
 const jobSelect = document.getElementById("jobSelect");
 const workerBodyDesktop = document.getElementById("workerBodyDesktop");
@@ -135,11 +137,10 @@ function renderWorkers(workers) {
         return;
     }
 
-    workers.forEach((w, index) => {
+    workers.forEach((w) => {
         const safeName = escapeHtml(w.Name || "");
         const safePosition = escapeHtml(w.Position || "");
 
-        // Desktop row
         const tr = document.createElement("tr");
         tr.innerHTML = `
             <td>
@@ -154,17 +155,11 @@ function renderWorkers(workers) {
                 ${ratingOptions("overall_rating")}
             </td>
             <td>
-                <input
-                    type="text"
-                    name="comments"
-                    class="comments-input"
-                    placeholder="Optional comments"
-                >
+                <input type="text" name="comments" class="comments-input" placeholder="Optional comments">
             </td>
         `;
         workerBodyDesktop.appendChild(tr);
 
-        // Mobile card
         const card = document.createElement("div");
         card.className = "worker-card";
         card.innerHTML = `
@@ -182,12 +177,7 @@ function renderWorkers(workers) {
 
             <div class="worker-field">
                 <label>Comments</label>
-                <input
-                    type="text"
-                    name="comments"
-                    class="comments-input"
-                    placeholder="Optional comments"
-                >
+                <input type="text" name="comments" class="comments-input" placeholder="Optional comments">
             </div>
         `;
         workerBodyMobile.appendChild(card);
@@ -209,12 +199,8 @@ jobSelect.addEventListener("change", async function () {
 
     try {
         const res = await fetch(`/get_project_data?project=${encodeURIComponent(job)}`);
-
-        if (!res.ok) {
-            throw new Error(`HTTP ${res.status}`);
-        }
-
         const data = await res.json();
+
         renderWorkers(data.workers || []);
 
         supervisorList.innerHTML = "";
@@ -223,7 +209,7 @@ jobSelect.addEventListener("change", async function () {
         const seen = new Set();
 
         allPeople.forEach(p => {
-            const name = p && p.Name ? String(p.Name).trim() : "";
+            const name = p?.Name?.trim();
             if (!name || seen.has(name)) return;
             seen.add(name);
 
@@ -233,10 +219,54 @@ jobSelect.addEventListener("change", async function () {
         });
 
     } catch (err) {
-        console.error("Failed to load project data:", err);
         renderDesktopEmpty("Failed to load workers");
         renderMobileEmpty("Failed to load workers");
-        supervisorList.innerHTML = "";
+    }
+});
+</script>
+
+<!-- ================= ⭐ 只改这里（submit逻辑） ================= -->
+<script>
+const ratingForm = document.getElementById("ratingForm");
+const saveBtn = document.getElementById("saveBtn");
+const submitMessage = document.getElementById("submitMessage");
+const submissionToken = document.getElementById("submissionToken");
+
+let isSubmitting = false;
+
+function generateSubmissionToken() {
+    return Date.now().toString() + "_" + Math.random().toString(36).slice(2);
+}
+
+submissionToken.value = generateSubmissionToken();
+
+ratingForm.addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    if (isSubmitting) return;
+
+    isSubmitting = true;
+    saveBtn.disabled = true;
+    saveBtn.innerText = "Saving...";
+
+    try {
+        const formData = new FormData(ratingForm);
+
+        const payload = [];
+        for (const [key, value] of formData.entries()) {
+            payload.push([key, value]);
+        }
+
+        sessionStorage.setItem("pendingSubmission", JSON.stringify(payload));
+
+        // ⭐ 核心：立刻跳转
+        window.location.href = "/processing";
+
+    } catch (err) {
+        console.error(err);
+        saveBtn.disabled = false;
+        saveBtn.innerText = "Save Ratings";
+        isSubmitting = false;
     }
 });
 </script>

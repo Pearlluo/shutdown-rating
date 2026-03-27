@@ -22,6 +22,8 @@ LEADER_KEYWORDS = [
     "DATA ANALYST"
 ]
 
+RECENT_SUBMISSIONS = {}
+RECENT_SUBMISSION_SECONDS = 120
 # ==============================
 # 缓存配置
 # ==============================
@@ -168,6 +170,10 @@ def home():
     )
 
 
+# ⭐ 只新增这一段
+@app.route("/processing")
+def processing():
+    return render_template("processing.html")
 # ==============================
 # 获取 jobs
 # 当前 contract/job 实际都来自 ProjectClean
@@ -234,6 +240,7 @@ def submit():
         supervisor = request.form.get("supervisor", "").strip()
         contract = request.form.get("contract", "").strip()
         job = request.form.get("job", "").strip()
+        submission_token = request.form.get("submission_token", "").strip()
 
         names = request.form.getlist("name")
         positions = request.form.getlist("position")
@@ -254,7 +261,29 @@ def submit():
         selected_job = job if job else contract
         if not selected_job:
             print("⚠ 没有 job / contract，未提交")
-            return redirect(url_for("home"))
+            return jsonify({
+                "status": "error",
+                "message": "No job/contract selected"
+            }), 400
+
+        # 防止短时间内重复提交同一个 token
+        now_ts = time.time()
+
+        # 清理过期 token
+        expired_tokens = [
+            token for token, ts in RECENT_SUBMISSIONS.items()
+            if (now_ts - ts) > RECENT_SUBMISSION_SECONDS
+        ]
+        for token in expired_tokens:
+            RECENT_SUBMISSIONS.pop(token, None)
+
+        # 如果同一个 token 已经提交过，直接拦截
+        if submission_token and submission_token in RECENT_SUBMISSIONS:
+            print("⚠ 重复提交已拦截:", submission_token)
+            return jsonify({
+                "status": "duplicate",
+                "message": "This submission has already been processed."
+            }), 200
 
         seen_keys = set()
 
@@ -264,15 +293,12 @@ def submit():
             comment = get_value(comments, i)
             overall_rating = get_value(overall_ratings, i)
 
-            # 没有人名不提交
             if not person:
                 continue
 
-            # 没有评分不提交
             if not overall_rating:
                 continue
 
-            # 本次提交内去重，避免重复写入同一行
             dedupe_key = (
                 person.upper(),
                 selected_job.upper(),
@@ -292,8 +318,6 @@ def submit():
                 "Supervisor": supervisor,
                 "Comments": comment,
                 "OverallRating": overall_rating,
-
-                # 保留调试 / 追踪字段
                 "Contract": contract,
                 "Position": position,
                 "SubmittedAt": submitted_at
@@ -301,7 +325,10 @@ def submit():
 
         if not rows:
             print("⚠ 没有有效评分数据，未提交")
-            return redirect(url_for("home"))
+            return jsonify({
+                "status": "error",
+                "message": "No valid rating data"
+            }), 400
 
         print("提交 rows 数量 =", len(rows))
         for idx, r in enumerate(rows, 1):
@@ -311,18 +338,30 @@ def submit():
             result = push_rows_to_ranking_list(rows)
             print("✅ 写回 PPLRankingTX 成功:", result)
 
-            # 提交成功后清缓存，下次页面读取最新数据
+            if submission_token:
+                RECENT_SUBMISSIONS[submission_token] = now_ts
+
             clear_roster_cache()
 
         except Exception as e:
             print("❌ 写回 PPLRankingTX 失败:", e)
-            return f"Submit failed: {e}", 500
+            return jsonify({
+                "status": "error",
+                "message": f"Submit failed: {e}"
+            }), 500
 
-        return redirect(url_for("home"))
+        return jsonify({
+            "status": "success",
+            "message": "Ratings submitted successfully",
+            "count": len(rows)
+        })
 
     except Exception as e:
         print("❌ submit() 失败:", e)
-        return f"Submit failed: {e}", 500
+        return jsonify({
+            "status": "error",
+            "message": f"Submit failed: {e}"
+        }), 500
 
 
 if __name__ == "__main__":
