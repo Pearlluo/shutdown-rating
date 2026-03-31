@@ -83,12 +83,13 @@
     </form>
 </div>
 
-<!-- ================= 原始 worker 加载逻辑（不动） ================= -->
+<!-- ================= 原始 worker 加载逻辑（保留） ================= -->
 <script>
 const jobSelect = document.getElementById("jobSelect");
 const workerBodyDesktop = document.getElementById("workerBodyDesktop");
 const workerBodyMobile = document.getElementById("workerBodyMobile");
 const supervisorList = document.getElementById("supervisorList");
+const supervisorInput = document.getElementById("supervisorInput");
 
 function escapeHtml(value) {
     if (value === null || value === undefined) return "";
@@ -191,6 +192,7 @@ jobSelect.addEventListener("change", async function () {
         workerBodyDesktop.innerHTML = "";
         workerBodyMobile.innerHTML = "";
         supervisorList.innerHTML = "";
+        supervisorInput.value = "";
         return;
     }
 
@@ -204,6 +206,7 @@ jobSelect.addEventListener("change", async function () {
         renderWorkers(data.workers || []);
 
         supervisorList.innerHTML = "";
+        supervisorInput.value = "";
 
         const allPeople = [...(data.leaders || []), ...(data.workers || [])];
         const seen = new Set();
@@ -225,7 +228,7 @@ jobSelect.addEventListener("change", async function () {
 });
 </script>
 
-<!-- ================= ⭐ 只改这里（submit逻辑） ================= -->
+<!-- ================= submit逻辑（已改成必填校验） ================= -->
 <script>
 const ratingForm = document.getElementById("ratingForm");
 const saveBtn = document.getElementById("saveBtn");
@@ -245,6 +248,22 @@ ratingForm.addEventListener("submit", function (e) {
 
     if (isSubmitting) return;
 
+    submitMessage.innerText = "";
+
+    // 保留浏览器原生 required 校验
+    if (!ratingForm.checkValidity()) {
+        ratingForm.reportValidity();
+        return;
+    }
+
+    const job = jobSelect.value.trim();
+    const supervisor = supervisorInput.value.trim();
+
+    if (!job || !supervisor) {
+        submitMessage.innerText = "Please fill in all required fields.";
+        return;
+    }
+
     isSubmitting = true;
     saveBtn.disabled = true;
     saveBtn.innerText = "Saving...";
@@ -259,11 +278,12 @@ ratingForm.addEventListener("submit", function (e) {
 
         sessionStorage.setItem("pendingSubmission", JSON.stringify(payload));
 
-        // ⭐ 核心：立刻跳转
+        // 立刻跳转到 processing
         window.location.href = "/processing";
 
     } catch (err) {
         console.error(err);
+        submitMessage.innerText = "Failed to prepare submission.";
         saveBtn.disabled = false;
         saveBtn.innerText = "Save Ratings";
         isSubmitting = false;
