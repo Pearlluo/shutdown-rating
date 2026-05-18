@@ -73,4 +73,3 @@ Hosted on **Azure App Service**, deployed automatically via **GitHub Actions** o
 - Designed for internal operational use
 - Loads latest SharePoint data on form open
 - Can be extended for additional shutdown workflows
-```
