@@ -1,4 +1,3 @@
-```
 # Shutdown Rating System
 
 A web-based rating form for shutdown workers. Supervisors select a project, choose workers from the live SharePoint roster, submit ratings, and results are written directly back to SharePoint for OPMS reporting.
@@ -93,4 +92,3 @@ shutdown-rating/
 ## Deployment
 
 Hosted on **Azure App Service**, deployed automatically via **GitHub Actions** on every push to `main`.
-```
