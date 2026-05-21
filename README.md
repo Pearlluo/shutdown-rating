@@ -24,6 +24,8 @@ flowchart TD
     class UI user
     class OPMS output
 ```
+## Preview
+![Employee Ratings](Employee%20Ratings.png)
 
 ## How it works
 
